@@ -291,15 +291,16 @@ func CheckAllowedUser(d Docker, imageName string, uids user.RangeList, isOnbuild
 	}
 	imageUser := extractUser(imageUserSpec)
 	if !user.IsUserAllowed(imageUser, &uids) {
-		return s2ierr.NewUserNotAllowedError(imageName, false)
+		return s2ierr.NewUserNotAllowedError(imageUser, imageName, false)
 	}
 	if isOnbuild {
 		cmds, err := d.GetOnBuild(imageName)
 		if err != nil {
 			return err
 		}
-		if !isOnbuildAllowed(cmds, &uids) {
-			return s2ierr.NewUserNotAllowedError(imageName, true)
+		imageUser, ok := isOnbuildAllowed(cmds, &uids)
+		if !ok {
+			return s2ierr.NewUserNotAllowedError(imageUser, imageName, true)
 		}
 	}
 	return nil
@@ -310,18 +311,19 @@ var dockerLineDelim = regexp.MustCompile(`[\t\v\f\r ]+`)
 // isOnbuildAllowed checks a list of Docker ONBUILD instructions for user
 // directives. It ensures that any users specified by the directives falls
 // within the specified range list of users.
-func isOnbuildAllowed(directives []string, allowed *user.RangeList) bool {
+func isOnbuildAllowed(directives []string, allowed *user.RangeList) (string, bool) {
+	var uname string
 	for _, line := range directives {
 		parts := dockerLineDelim.Split(line, 2)
 		if strings.ToLower(parts[0]) != "user" {
 			continue
 		}
-		uname := extractUser(parts[1])
+		uname = extractUser(parts[1])
 		if !user.IsUserAllowed(uname, allowed) {
-			return false
+			return uname, false
 		}
 	}
-	return true
+	return uname, true
 }
 
 func extractUser(userSpec string) string {

@@ -223,17 +223,17 @@ func NewSourcePathError(path string) error {
 
 // NewUserNotAllowedError returns a new error that indicates that the build
 // could not run because the image uses a user outside of the range of allowed users
-func NewUserNotAllowedError(image string, onbuild bool) error {
+func NewUserNotAllowedError(imageUser string, image string, onbuild bool) error {
 	var msg string
 	if onbuild {
-		msg = fmt.Sprintf("image %q includes at least one ONBUILD instruction that sets the user to a user that is not allowed", image)
+		msg = fmt.Sprintf("user %q of ONBUILD instruction in image %q must specify a user that is numeric and within the range of allowed users", imageUser, image)
 	} else {
-		msg = fmt.Sprintf("image %q must specify a user that is numeric and within the range of allowed users", image)
+		msg = fmt.Sprintf("user %q in image %q must specify a user that is numeric and within the range of allowed users", imageUser, image)
 	}
 	return Error{
 		Message:    msg,
 		ErrorCode:  UserNotAllowedError,
-		Suggestion: fmt.Sprintf("modify image %q to use a numeric user within the allowed range or build without the --allowed-uids flag", image),
+		Suggestion: fmt.Sprintf("modify user %q in image %q to use a numeric user within the allowed range or build without the --allowed-uids flag", imageUser, image),
 	}
 }
 
